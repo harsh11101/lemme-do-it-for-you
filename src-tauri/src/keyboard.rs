@@ -3,6 +3,7 @@ use std::time::{Instant, Duration};
 use std::thread;
 use rusqlite::Connection;
 use simulate::{self, Key, EventBuffer};
+use std::collections::HashMap;
 
 pub struct buffer_vector_value{
     buffer: EventBuffer,
@@ -11,6 +12,12 @@ pub struct buffer_vector_value{
 pub struct delay_vector_value{
     delay: Duration,
     step: i32
+}
+#[derive(Clone, serde::Serialize)]
+pub struct payload{
+    variables: Vec<String>,
+    length: usize,
+    value: String,
 }
 pub fn check_trigger(input: &str)->Option<String>{
     let conn = Connection::open("../Data.db").unwrap();
@@ -28,6 +35,7 @@ pub fn check_trigger(input: &str)->Option<String>{
     }
     return None;
 }
+#[tauri::command]
 pub fn run_backspace(length: usize)->(){
     for _ in 0..length{
         simulate::send(Key::Backspace).unwrap();
@@ -77,6 +85,7 @@ pub fn parse_number<I>(iter: &mut I) -> Option<i32> where I: Iterator<Item = cha
         j += 1;
     }
 }
+#[tauri::command]
 pub fn run_string(value: String)->(){
     let mut buffer_vector: Vec<buffer_vector_value>=Vec::new();
     let mut chars=value.chars().peekable();
@@ -141,6 +150,66 @@ pub fn run_string(value: String)->(){
     }
     run_buffer_vector(&mut buffer_vector, &mut delay_vector);
 }
+pub fn pre_process_value(input: String)->Vec<String>{
+    let mut extracted_strings = Vec::new();
+    let mut string_count = HashMap::new();
+    
+    let start_delim = "{{";
+    let end_delim = "}}";
+    
+    let mut current_index = 0;
+    
+    while let Some(start) = input[current_index..].find(start_delim) {
+        let start_index = current_index + start;
+        let end_index = start_index + start_delim.len();
+        
+        if let Some(end) = input[end_index..].find(end_delim) {
+            let end_index = end_index + end;
+            let extracted_string = &input[start_index + start_delim.len()..end_index];
+            
+            if !extracted_string.contains(start_delim) && !extracted_string.contains(end_delim) {
+                if !string_count.contains_key(extracted_string) {
+                    extracted_strings.push(extracted_string.to_string());
+                    string_count.insert(extracted_string.to_string(), 1);
+                }
+            }
+            
+            current_index = end_index + end_delim.len();
+        } else {
+            break;
+        }
+    }
+    extracted_strings
+}
+pub fn get_variable_values(input: String,length: usize,variables: Vec<String>,_app_handle: tauri::AppHandle)->(){
+    let _docs_window = tauri::WindowBuilder::new(
+        &_app_handle.clone(),
+        "variables",
+        tauri::WindowUrl::App("../../src/windows/variables/index.html".into()),
+    )
+    .title("Variables")
+    .build()
+    .unwrap();
+    let data=payload{
+        variables: variables,
+        length: length,
+        value: input
+    };
+    let docs_window_clone=_docs_window.clone();
+    thread::spawn(move || {
+        loop{
+            docs_window_clone.emit("sending_data", data.clone()).unwrap();
+        }
+    });
+    let id=_docs_window.clone().listen("for_id",|_event|{});
+    let _docs_window_clone_forclosing=_docs_window.clone();
+    _docs_window.clone().listen("close_window",move |event|{
+        if let Err(e) = _docs_window_clone_forclosing.clone().close() {
+            println!("Failed to close window: {:?}", e);
+        }
+        _docs_window_clone_forclosing.clone().unlisten(id);
+    });
+}
 pub fn keyboard_listener(_app_handle: tauri::AppHandle)->(){
     let mut _input = String::new();
     let mut _now = Instant::now();
@@ -167,8 +236,14 @@ pub fn keyboard_listener(_app_handle: tauri::AppHandle)->(){
                     Some(value)=>{
                         let length=_input.len();
                         thread::sleep(Duration::from_millis(500));
-                        run_backspace(length);
-                        run_string(value);
+                        let variables: Vec<String>=pre_process_value(value.clone());
+                        if variables.len()>0{
+                            get_variable_values(value,length,variables,_app_handle.clone());
+                        }
+                        else{
+                            run_backspace(length);
+                            run_string(value);
+                        }
                         _input.clear();
                         _now=Instant::now();
                     }

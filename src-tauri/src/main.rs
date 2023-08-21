@@ -105,7 +105,7 @@ fn delete_all_data()->(){
 fn main() {
   tauri::Builder::default()
     .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec!["--flag1", "--flag2"])))
-    .invoke_handler(tauri::generate_handler![get_all_data,delete_by_trigger,insert_data,update_by_trigger,delete_all_data])
+    .invoke_handler(tauri::generate_handler![get_all_data,delete_by_trigger,insert_data,update_by_trigger,delete_all_data,keyboard::run_string,keyboard::run_backspace])
     .setup(|app|{
       create_or_check_file().unwrap();
       let tauri_app_handle=app.handle();

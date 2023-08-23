@@ -1,18 +1,68 @@
-# Vue 3 + TypeScript + Vite
+# Tauri Trigger App - Automate with Style :rocket:
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Welcome to the Tauri Trigger App! 🚀 This nifty little tool empowers you to automate tasks in your terminal with a touch of flair. Whether you're tired of the repetitive git-push-grab-coffee dance, or you simply want to have a bit of fun with your automation, this app has got your back.
 
-## Recommended IDE Setup
+## Features
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+- Set Custom Triggers: Need some inspiration? We've got you covered! Or, unleash your creativity and define triggers that match your style! Use the `::` symbol to simulate pressing the ENTER key wherever you need it. 👉🕹️
+- Time Delays: Need a breather? Use `[[milliseconds]]` to insert a pause between actions. Time for a sip of coffee, perhaps? ☕️
+- User-Prompted Variables: Curly braces `{{}}` to the rescue! Insert variables that prompt you for values, like `{{commit-message}}` or `{{branch-name}}`. Customize on the fly! Need some runtime data? We're here for you! 🤖📊
+- Fire Mode : Ever wanted to add a dramatic touch to your workflow? In case of fire, don't just `git add`, `git commit`, and `git push`—run for the extinguisher! 🔥
 
-## Type Support For `.vue` Imports in TS
+## Getting Started
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+1. **Clone the Repository**: Start by cloning this repository to your local machine.
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+```bash
+git clone https://github.com/harsh11101/lemme-do-it-for-you.git
+```
 
-1. Disable the built-in TypeScript Extension
-   1. Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-   2. Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
+2. **Install Dependencies**: Navigate to the project directory and install the required dependencies.
+
+```bash
+cd lemme-do-it-for-you
+npm install
+```
+
+3. **Run the App**: Launch the Tauri app and bring your automation dreams to life!
+
+```bash
+npm tauri dev
+```
+
+## Screenshots
+
+![Main app window](image.png)
+
+## Examples
+
+### Automating Git Push
+
+Let's say you want to automate the process of pushing to a Git repository. Here's how you can set it up:
+
+1. Trigger: `git-push`
+2. Value: `git push origin {{branch-name}}`
+
+Now, whenever you use the `git-push` trigger, the app will prompt you for the branch name and perform a push for you!
+
+### A Dramatic Git Push (Fire Mode)
+
+You know, just in case of fire:
+
+1. Trigger: `fire-git-push`
+2. Value:
+   1. `git add .`
+   2. `git commit -m "{{commit-message}}"`
+   3. `git push origin {{branch-name}}`
+   4. `run for your life`
+
+Remember, safety first! 🔥
+
+## Contribution
+
+Found a bug? Want to add a witty feature? Contributions are welcome! Just fork this repository, make your changes, and submit a pull request. Let's make automation fun together! 🎉
+
+
+---
+
+Happy automating, and remember: With great automation comes great responsibility! 😉🤖🔥

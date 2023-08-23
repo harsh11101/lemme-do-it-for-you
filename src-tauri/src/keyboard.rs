@@ -43,10 +43,8 @@ pub fn run_backspace(length: usize)->(){
 }
 pub fn parse_number<I>(iter: &mut I) -> Option<i32> where I: Iterator<Item = char> + Clone,{
     let mut num_str = String::new();
-
     // Clone the iterator to get a separate peekable iterator
     let mut peekable_iter = iter.clone().peekable();
-
     // Read characters until we find the closing brackets "]]"
     while let Some(c) = peekable_iter.next() {
         if c == ']' && peekable_iter.peek() == Some(&']') {
@@ -55,7 +53,6 @@ pub fn parse_number<I>(iter: &mut I) -> Option<i32> where I: Iterator<Item = cha
         }
         num_str.push(c);
     }
-
     // Attempt to parse the number
     num_str.parse::<i32>().ok()
 }

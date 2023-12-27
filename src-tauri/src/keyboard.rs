@@ -1,20 +1,21 @@
 use rdev::listen;
+use tauri::Manager;
 use std::time::{Instant, Duration};
 use std::thread;
 use rusqlite::Connection;
 use simulate::{self, Key, EventBuffer};
 use std::collections::HashMap;
 
-pub struct buffer_vector_value{
+pub struct BufferVectorValue{
     buffer: EventBuffer,
     step: i32
 }
-pub struct delay_vector_value{
+pub struct DelayVectorValue{
     delay: Duration,
     step: i32
 }
 #[derive(Clone, serde::Serialize)]
-pub struct payload{
+pub struct Payload{
     variables: Vec<String>,
     length: usize,
     value: String,
@@ -36,6 +37,13 @@ pub fn check_trigger(input: &str)->Option<String>{
     return None;
 }
 #[tauri::command]
+pub fn run_backspace_frontend(length: usize, window: tauri::Window)->(){
+    window.minimize().unwrap();
+    for _ in 0..length{
+        simulate::send(Key::Backspace).unwrap();
+    }
+}
+
 pub fn run_backspace(length: usize)->(){
     for _ in 0..length{
         simulate::send(Key::Backspace).unwrap();
@@ -56,7 +64,7 @@ pub fn parse_number<I>(iter: &mut I) -> Option<i32> where I: Iterator<Item = cha
     // Attempt to parse the number
     num_str.parse::<i32>().ok()
 }
-    pub fn run_buffer_vector(buffer_vector: &mut Vec<buffer_vector_value>, delay_vector: &mut Vec<delay_vector_value>)->(){
+    pub fn run_buffer_vector(buffer_vector: &mut Vec<BufferVectorValue>, delay_vector: &mut Vec<DelayVectorValue>)->(){
     let n = buffer_vector.len();
     let m = delay_vector.len();
     let mut i = 0;
@@ -84,10 +92,10 @@ pub fn parse_number<I>(iter: &mut I) -> Option<i32> where I: Iterator<Item = cha
 }
 #[tauri::command]
 pub fn run_string(value: String)->(){
-    let mut buffer_vector: Vec<buffer_vector_value>=Vec::new();
+    let mut buffer_vector: Vec<BufferVectorValue>=Vec::new();
     let mut chars=value.chars().peekable();
     let mut str: String=String::new();
-    let mut delay_vector: Vec<delay_vector_value>=Vec::new();
+    let mut delay_vector: Vec<DelayVectorValue>=Vec::new();
     let mut stp: i32=1;
     while let Some(c)=chars.next(){
         if c == '[' && chars.peek() == Some(&'[') {
@@ -96,7 +104,7 @@ pub fn run_string(value: String)->(){
             if let Some(num) = parse_number(&mut chars) {
                 let sleep_duration = Duration::from_millis(num as u64);
                 if !str.is_empty(){
-                    buffer_vector.push(buffer_vector_value{
+                    buffer_vector.push(BufferVectorValue{
                         buffer: EventBuffer::new(),
                         step: stp
                     });
@@ -104,7 +112,7 @@ pub fn run_string(value: String)->(){
                     stp+=1;
                     str.clear();
                 }
-                delay_vector.push(delay_vector_value{
+                delay_vector.push(DelayVectorValue{
                     delay: sleep_duration,
                     step: stp
                 });
@@ -122,7 +130,7 @@ pub fn run_string(value: String)->(){
             }
         }
         else if c==':' && chars.peek()==Some(&':'){
-            buffer_vector.push(buffer_vector_value{
+            buffer_vector.push(BufferVectorValue{
                 buffer: EventBuffer::new(),
                 step: stp
             });
@@ -139,7 +147,7 @@ pub fn run_string(value: String)->(){
         }
     }
     if !str.is_empty(){
-        buffer_vector.push(buffer_vector_value{
+        buffer_vector.push(BufferVectorValue{
             buffer: EventBuffer::new(),
             step: stp
         });
@@ -178,33 +186,49 @@ pub fn pre_process_value(input: String)->Vec<String>{
     }
     extracted_strings
 }
-pub fn get_variable_values(input: String,length: usize,variables: Vec<String>,_app_handle: tauri::AppHandle)->(){
-    let _docs_window = tauri::WindowBuilder::new(
-        &_app_handle.clone(),
+pub fn get_variable_values(input: String,length: usize,variables: Vec<String>,app_handle: tauri::AppHandle)->(){
+    let handle_to_check=app_handle.clone();
+    let if_window_exists=handle_to_check.get_window("variables");
+    match if_window_exists{
+        Some(window)=>{
+            println!("Window exists");
+            if let Err(e) = window.close() {
+                println!("Failed to close window: {:?}", e);
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+        None=>{
+            println!("Window does not exist")
+        }
+    }
+    let docs_window = tauri::WindowBuilder::new(
+        &app_handle.clone(),
         "variables",
         tauri::WindowUrl::App("../../src/windows/variables/index.html".into()),
     )
     .title("Variables")
+    .center()
     .build()
     .unwrap();
-    let data=payload{
-        variables: variables,
-        length: length,
+    docs_window.unminimize().unwrap();
+    let data=Payload{
+        variables,
+        length,
         value: input
     };
-    let docs_window_clone=_docs_window.clone();
+    let docs_window_clone=docs_window.clone();
     thread::spawn(move || {
         loop{
             docs_window_clone.emit("sending_data", data.clone()).unwrap();
         }
     });
-    let id=_docs_window.clone().listen("for_id",|_event|{});
-    let _docs_window_clone_forclosing=_docs_window.clone();
-    _docs_window.clone().listen("close_window",move |event|{
-        if let Err(e) = _docs_window_clone_forclosing.clone().close() {
+    let id=docs_window.clone().listen("for_id",|_event|{});
+    let docs_window_clone_forclosing=docs_window.clone();
+    docs_window.clone().listen("close_window",move |_event|{
+        if let Err(e) = docs_window_clone_forclosing.clone().close() {
             println!("Failed to close window: {:?}", e);
         }
-        _docs_window_clone_forclosing.clone().unlisten(id);
+        docs_window_clone_forclosing.clone().unlisten(id);
     });
 }
 pub fn keyboard_listener(_app_handle: tauri::AppHandle)->(){

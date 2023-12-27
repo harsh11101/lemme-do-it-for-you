@@ -4,7 +4,7 @@ import {invoke} from '@tauri-apps/api/tauri';
 const unlisten = async()=>{
     return new Promise(async (resolve)=>{
         try {
-            await once("pre_process_data", async (data)=>{
+            await once("sending_data", async (data)=>{
                 if(data!==undefined)resolve(data);
             })
         } catch (e) {
@@ -15,9 +15,9 @@ const unlisten = async()=>{
 let data:any;
 try{
     data=await unlisten();
-    let variables:any=data.payload.data.variables;
-    let length: number=data.payload.data.length;
-    let value: string=data.payload.data.value;
+    let variables:any=data.payload.variables;
+    let length: number=data.payload.length;
+    let value: string=data.payload.value;
     const replacements: Record<string, string> = createTable(variables);
     const submit_button = document.getElementById("submit-button");
     const cancel_button = document.getElementById("cancel-button");
@@ -27,11 +27,15 @@ try{
     else{
         submit_button.addEventListener("click", async () => {
             value=replace_variables(replacements,value);
-            await invoke('run_backspace',{length: length}).then(async ()=>{
+            console.log(value);
+            await invoke('run_backspace_frontend',{length: length}).then(async ()=>{
                 await invoke('run_string',{value: value}).then(async ()=>{
                     emit('close_window',{});
                 });
             });
+        });
+        cancel_button.addEventListener("click", async () => {
+            emit('close_window',{});
         });
     }
 
@@ -50,7 +54,7 @@ function replace_variables(replacements: Record<string, string>,value: string){
   return value.replace(regex, match => modifiedReplacements[match]);
 }
 function createTable(variables: any): Record<string, string>{
-    const tableContainer = document.getElementById("table-container");
+    const tableContainer = document.createElement("table");
     if (!tableContainer) {
         console.error("Table container element not found.");
         return {};
@@ -76,7 +80,8 @@ function createTable(variables: any): Record<string, string>{
     const row = document.createElement("tr");
 
     const leftCell = document.createElement("td");
-    leftCell.textContent = item;
+    leftCell.style.color = "white";
+    leftCell.textContent = item+': ';
     row.appendChild(leftCell);
 
     const inputCell = document.createElement("td");
@@ -92,7 +97,7 @@ function createTable(variables: any): Record<string, string>{
 
     tableContainer.appendChild(row);
   }
-  let container = document.getElementById("variable-container");
+  let container = document.getElementById("table-container");
     if (!container) {
         console.error("Variable container element not found.");
         return {};

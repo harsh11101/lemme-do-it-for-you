@@ -10,7 +10,7 @@ use std::fs;
 use std::path::Path;
 
 #[derive(Serialize)]
-struct result_vector_value{
+struct ResultVectorValue{
     trigger: String,
     value: String
 }
@@ -20,12 +20,12 @@ fn create_or_check_file() -> std::io::Result<()> {
   if path.exists() {
       
   } else {
-      let mut file = fs::File::create(file_path)?;
+      let _serde_jsonfile = fs::File::create(file_path)?;
   }
   Ok(())
 }
 #[tauri::command]
-fn get_all_data() -> Vec<result_vector_value> {
+fn get_all_data() -> Vec<ResultVectorValue> {
   let conn = Connection::open("../Data.db").unwrap();
   conn.execute(
       "CREATE TABLE IF NOT EXISTS triggervalue (trigger TEXT UNIQUE NOT NULL, value TEXT NOT NULL)",
@@ -33,9 +33,9 @@ fn get_all_data() -> Vec<result_vector_value> {
   )
   .unwrap();
   let mut stmt = conn.prepare("SELECT trigger, value FROM triggervalue").unwrap();
-  let mut result_vector: Vec<result_vector_value> = Vec::new();
+  let mut result_vector: Vec<ResultVectorValue> = Vec::new();
   let data_iter = stmt.query_map([], |row| {
-      Ok(result_vector_value {
+      Ok(ResultVectorValue {
           trigger: row.get(0)?,
           value: row.get(1)?,
       })
@@ -105,7 +105,7 @@ fn delete_all_data()->(){
 fn main() {
   tauri::Builder::default()
     .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec!["--flag1", "--flag2"])))
-    .invoke_handler(tauri::generate_handler![get_all_data,delete_by_trigger,insert_data,update_by_trigger,delete_all_data,keyboard::run_string,keyboard::run_backspace])
+    .invoke_handler(tauri::generate_handler![get_all_data,delete_by_trigger,insert_data,update_by_trigger,delete_all_data,keyboard::run_string,keyboard::run_backspace_frontend])
     .setup(|app|{
       create_or_check_file().unwrap();
       let tauri_app_handle=app.handle();
